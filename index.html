@@ -7,13 +7,21 @@
     <title>Pictionary</title>
 </head>
 <body>
-    <h1>Hello World</h1>
+    <h1>Draw with yourself caz you've no friends</h1>
+
+    <ul class="users">
+    </ul>
+
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.2.0/p5.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 
     <style>
         canvas {
             border: 1px solid #000;
+        }
+        .active {   
+            color: #4d834d;
         }
     </style>
 
@@ -24,6 +32,26 @@
 
         socket.emit('username', username);
 
+        let draw = false;
+
+        const userslist = document.querySelector('.users');
+
+        socket.on('users', (data) => {
+            userslist.innerHTML = "";
+            data.forEach((user) => {
+                const li = document.createElement('li');
+                li.innerHTML = user.username;
+                if(user.active) {
+                    li.classList.add('active');
+                }
+
+                if(username === user.username) {
+                    draw = user.active;
+                }
+                userslist.appendChild(li);
+            })
+        });
+
 
         // P5JS
         function setup () {
@@ -32,7 +60,18 @@
 
         function mouseDragged () {
             line(pmouseX, pmouseY, mouseX, mouseY);
+            socket.emit('line', {
+                pmouseX, pmouseY, mouseX, mouseY
+            });
         }
+
+        socket.on('line', (data) => {
+            line(data.pmouseX, data.pmouseY, data.mouseX, data.mouseY);
+        });
+
+        socket.on('clear', () => {
+            clear();
+        });
     </script>
 </body>
 

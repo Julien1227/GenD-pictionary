@@ -10,12 +10,56 @@ const server = express()
 const io = socketio(server);
 
 let users = [];
+let timeout = null;
+let currentPlayer = null;
 
 io.on('connection', (socket) => {
     socket.on('username', (username) => {
         console.log(username);
 
         socket.username = username;
-        users.push(socket);
+
+        if (users.lenght === 0) {
+            currentPlayer = socket;
+            users.push(socket);
+            switchPlayer()
+        }else {
+            users.push(socket);
+        }
+
+
+        sendUsers();
+    });
+
+    socket.on('line', (data) => {
+        socket.broadcast.emit('line', data);
     });
 });
+
+io.on('disconnect', () => {
+    console.log(`${socket.username} has left`);
+    users = users.filter((user) => {
+        return user !== socket;
+    });
+
+    sendUsers();
+});
+
+function sendUsers() {
+    io.emit('users', users.map((user) => {
+        return {
+            username: user.username,
+            active: user === currentPlayer
+        }
+    }));
+}
+
+function switchPlayer () {
+    const indexCurrentPlayer = users.indexOf(currentPlayer);
+    currentPlayer = users[(indexCurrentPlayer + 1) % users.lenght];
+    sendUsers();
+
+    io.emit('clear');
+}
+
+timeout = setTimeout(switchPlayer, 5000);
